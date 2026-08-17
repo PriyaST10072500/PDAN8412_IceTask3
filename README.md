@@ -1,6 +1,5 @@
 # 🌍 Global Situation Dashboard
 
----
 
 ## 📌 What Was Built
 
@@ -23,7 +22,7 @@ All AI models run entirely on the local machine.
 | **Model B** | Probabilistic    | Uses sampling, so repeated runs can differ                  |
 | **Model C** | Tencent R3-Skill | Two-stage skill router using a bi-encoder and cross-encoder |
 
----
+
 
 # ⚠️ Issues Faced and Solutions
 
@@ -50,7 +49,7 @@ Four models were tested to find one that was both capable and memory efficient.
 
 The result demonstrated that using the biggest model is not necessarily the best approach. It is better to find the **smallest model capable of completing the required task**.
 
----
+
 
 ## 🔴 Problem 2 - Large Event Objects
 
@@ -90,7 +89,7 @@ It:
 
 This reduced the prompt size by approximately **80%** and eliminated the model's tendency to describe JSON structures instead of analyzing them.
 
----
+
 
 ## 🔴 Problem 3 - CPU Inference Time
 
@@ -107,7 +106,7 @@ The following timeout and response-length controls were implemented:
 * **Backend R3-Skill:** Handled directly by Flask
 * **`num_predict: 512`:** Caps the response length
 
----
+
 
 ## 🔴 Problem 4 - R3-Skill Memory Overhead
 
@@ -131,7 +130,7 @@ A streamlined Flask microservice was built that:
 * Provides extremely fast inference
 * Can be killed independently if memory becomes critical
 
----
+
 
 # 🏗️ Architecture
 
@@ -185,7 +184,7 @@ npm run dev
 
 **Port:** `5173`
 
----
+
 
 # 🤖 Model Details
 
@@ -232,7 +231,7 @@ Same output
 * Repeatable intelligence reports
 * Automated alerting where variance is unacceptable
 
----
+
 
 ## 🟣 Model B - Probabilistic
 
@@ -281,7 +280,7 @@ Different output
 * Generating diverse analyst perspectives
 * Creative summarization
 
----
+
 
 ## 🟢 Model C - Tencent R3-Skill
 
@@ -327,7 +326,7 @@ R3-Reranker
 Best Matching Skill
 ```
 
----
+
 
 # 📚 Skill Library
 
@@ -371,7 +370,7 @@ R3-Skill provides **automated triage**.
 
 When an event occurs, it can identify which response playbook should be activated.
 
----
+
 
 # ⚙️ How to Run
 
@@ -382,7 +381,7 @@ When an event occurs, it can identify which response playbook should be activate
 * Ollama installed locally
 * ~4 GB free RAM for peak usage
 
----
+
 
 ## 1️⃣ Install Dependencies
 
@@ -398,7 +397,7 @@ npm install
 pip install torch transformers flask flask-cors numpy
 ```
 
----
+
 
 ## 2️⃣ Pull the LLM
 
@@ -414,11 +413,11 @@ server/index.js
 
 The code is model-agnostic.
 
----
+
 
 ## 3️⃣ Start the Four Services
 
-### Terminal 1 — Ollama
+### Terminal 1 - Ollama
 
 ```bash
 ollama run qwen2:0.5b
@@ -444,7 +443,7 @@ node server/index.js
 npm run dev
 ```
 
----
+
 
 ## 4️⃣ Open the Dashboard
 
@@ -454,7 +453,7 @@ Navigate to:
 http://localhost:5173
 ```
 
----
+
 
 # 📡 API Endpoints
 
@@ -466,11 +465,11 @@ http://localhost:5173
 | `/api/assistant/probabilistic` | POST   | `{question, dashboard}` | Model B — probabilistic       |
 | `/api/r3/route`                | POST   | `{query}`               | Model C — R3-Skill router     |
 
----
+
 
 # 📊 Deterministic vs. Probabilistic
 
-| Aspect                | Model A — Deterministic | Model B — Probabilistic        |
+| Aspect                | Model A - Deterministic | Model B - Probabilistic        |
 | --------------------- | ----------------------- | ------------------------------ |
 | **Decoding strategy** | Greedy                  | Nucleus sampling               |
 | **Temperature**       | 0                       | 0.8                            |
@@ -500,7 +499,7 @@ between runs using the same dashboard snapshot.
 
 This demonstrated the difference between deterministic and probabilistic model behaviour.
 
----
+
 
 # 📁 Files Added / Modified
 
@@ -511,7 +510,7 @@ This demonstrated the difference between deterministic and probabilistic model b
 | `server/skills.jsonl` | **New** - Skill library for R3-Skill routing                                                                       |
 | `src/App.jsx`         | Added three AI buttons - Original, Deterministic, Probabilistic - plus R3-Skill Router panel and data sanitization |
 
----
+
 
 # 📝 Notes
 
