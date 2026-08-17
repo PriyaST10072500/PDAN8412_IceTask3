@@ -27,7 +27,7 @@ All AI models run entirely on the local machine.
 
 # ⚠️ Issues Faced and Solutions
 
-## 🔴 Problem 1 — Model Size
+## 🔴 Problem 1 - Model Size
 
 The originally suggested `llama3.1` model is **4.7 GB**, which was too large for a standard laptop.
 
@@ -52,7 +52,7 @@ The result demonstrated that using the biggest model is not necessarily the best
 
 ---
 
-## 🔴 Problem 2 — Large Event Objects
+## 🔴 Problem 2 - Large Event Objects
 
 The dashboard's event objects contained `__threeObjPoint`, which included massive Three.js geometry information such as:
 
@@ -92,9 +92,9 @@ This reduced the prompt size by approximately **80%** and eliminated the model's
 
 ---
 
-## 🔴 Problem 3 — CPU Inference Time
+## 🔴 Problem 3 - CPU Inference Time
 
-With CPU-only inference, even the 500 MB model can take **30–60 seconds** to respond.
+With CPU-only inference, even the 500 MB model can take **30-60 seconds** to respond.
 
 The default fetch timeout therefore terminated requests before the model had finished.
 
@@ -109,7 +109,7 @@ The following timeout and response-length controls were implemented:
 
 ---
 
-## 🔴 Problem 4 — R3-Skill Memory Overhead
+## 🔴 Problem 4 - R3-Skill Memory Overhead
 
 Tencent R3-Skill requires two separate models:
 
@@ -120,7 +120,7 @@ Each requires approximately **2.4 GB** of memory.
 
 Running these alongside Ollama and the dashboard created a significant memory requirement.
 
-### ✅ Solution — Lightweight R3 Implementation
+### ✅ Solution - Lightweight R3 Implementation
 
 A streamlined Flask microservice was built that:
 
@@ -189,7 +189,7 @@ npm run dev
 
 # 🤖 Model Details
 
-## 🔵 Model A — Deterministic
+## 🔵 Model A - Deterministic
 
 **Endpoint:**
 
@@ -234,7 +234,7 @@ Same output
 
 ---
 
-## 🟣 Model B — Probabilistic
+## 🟣 Model B - Probabilistic
 
 **Endpoint:**
 
@@ -283,7 +283,7 @@ Different output
 
 ---
 
-## 🟢 Model C — Tencent R3-Skill
+## 🟢 Model C - Tencent R3-Skill
 
 **Endpoint:**
 
@@ -299,7 +299,7 @@ R3-Skill is not a chatbot.
 
 It is a **retrieval system** that matches an event description against a library of predefined response skills and returns the best match.
 
-### Stage 1 — Recall
+### Stage 1 - Recall
 
 **Bi-Encoder**
 
@@ -307,7 +307,7 @@ It is a **retrieval system** that matches an event description against a library
 
 Cosine similarity is then used to quickly recall the most likely candidates.
 
-### Stage 2 — Rerank
+### Stage 2 - Rerank
 
 **Cross-Encoder**
 
@@ -424,7 +424,7 @@ The code is model-agnostic.
 ollama run qwen2:0.5b
 ```
 
-### Terminal 2 — R3-Skill Python Service
+### Terminal 2 - R3-Skill Python Service
 
 ```bash
 python server/r3_server.py
@@ -432,13 +432,13 @@ python server/r3_server.py
 
 This will download approximately **4.8 GB** of R3 model weights on the first run.
 
-### Terminal 3 — Node.js Backend
+### Terminal 3 - Node.js Backend
 
 ```bash
 node server/index.js
 ```
 
-### Terminal 4 — Vite Dashboard
+### Terminal 4 - Vite Dashboard
 
 ```bash
 npm run dev
@@ -507,9 +507,9 @@ This demonstrated the difference between deterministic and probabilistic model b
 | File                  | Change                                                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `server/index.js`     | Added `/api/assistant/deterministic`, `/api/assistant/probabilistic`, and `/api/r3/route` endpoints                |
-| `server/r3_server.py` | **New** — Flask microservice running Tencent R3-Skill                                                              |
-| `server/skills.jsonl` | **New** — Skill library for R3-Skill routing                                                                       |
-| `src/App.jsx`         | Added three AI buttons — Original, Deterministic, Probabilistic — plus R3-Skill Router panel and data sanitization |
+| `server/r3_server.py` | **New** - Flask microservice running Tencent R3-Skill                                                              |
+| `server/skills.jsonl` | **New** - Skill library for R3-Skill routing                                                                       |
+| `src/App.jsx`         | Added three AI buttons - Original, Deterministic, Probabilistic - plus R3-Skill Router panel and data sanitization |
 
 ---
 
