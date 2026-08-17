@@ -461,9 +461,9 @@ http://localhost:5173
 | ------------------------------ | ------ | ----------------------- | ----------------------------- |
 | `/api/health`                  | GET    | `-`                     | Check if server is alive      |
 | `/api/assistant`               | POST   | `{question, dashboard}` | Original assistant (balanced) |
-| `/api/assistant/deterministic` | POST   | `{question, dashboard}` | Model A — deterministic       |
-| `/api/assistant/probabilistic` | POST   | `{question, dashboard}` | Model B — probabilistic       |
-| `/api/r3/route`                | POST   | `{query}`               | Model C — R3-Skill router     |
+| `/api/assistant/deterministic` | POST   | `{question, dashboard}` | Model A - deterministic       |
+| `/api/assistant/probabilistic` | POST   | `{question, dashboard}` | Model B - probabilistic       |
+| `/api/r3/route`                | POST   | `{query}`               | Model C - R3-Skill router     |
 
 
 
