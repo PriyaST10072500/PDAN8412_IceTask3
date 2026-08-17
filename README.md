@@ -1,528 +1,454 @@
-# Global Situation Dashboard
-
-A real-time open-source intelligence (OSINT), cyber threat monitoring, disaster awareness, network intelligence, space operations, aviation tracking, maritime awareness, and AI-assisted situational awareness platform built with React, Vite, Three.js, React Globe GL, Satellite.js, and Ollama.
-
-The Global Situation Dashboard provides a centralized operational picture of events occurring across multiple intelligence domains. By combining live cyber threat feeds, disaster monitoring systems, space tracking, network intelligence, aviation monitoring, maritime awareness, and a local AI analyst assistant, the platform delivers a single pane of glass for understanding what is happening around the world.
+# 🌍 Global Situation Dashboard
 
 ---
 
-# Why This Project Exists
+## 📌 What Was Built
 
-Information is often fragmented across dozens of websites, dashboards, intelligence feeds, and monitoring platforms.
+The **Global Situation Dashboard** now includes three locally-running AI models that analyze live global event data, including:
 
-The goal of this project is to bring together multiple domains of intelligence into one interactive platform where users can quickly understand:
+* 🌍 Earthquakes
+* 🌋 Volcanic activity
+* 💻 Cybersecurity incidents
+* 🔐 CVEs
+* 🦠 Ransomware
+* ✈️ Aircraft
+* 🚢 Maritime activity
+* 🌐 Other global events
 
-* What is happening right now
-* Which threats are most important
-* How different events may be related
-* What the overall global risk level is
-* Which intelligence feeds are healthy and operational
-* What actions may require further investigation
+All AI models run entirely on the local machine.
 
-The dashboard is designed for:
-
-* Security Operations Centers (SOC)
-* Open Source Intelligence (OSINT) enthusiasts
-* Cybersecurity professionals
-* Students and researchers
-* Intelligence analysts
-* Disaster monitoring teams
-* Aviation and maritime enthusiasts
-* Anyone interested in global situational awareness
+| Model       | Type             | How It Works                                                |
+| ----------- | ---------------- | ----------------------------------------------------------- |
+| **Model A** | Deterministic    | Always produces the same output for the same input          |
+| **Model B** | Probabilistic    | Uses sampling, so repeated runs can differ                  |
+| **Model C** | Tencent R3-Skill | Two-stage skill router using a bi-encoder and cross-encoder |
 
 ---
 
-# Key Features
+# ⚠️ Issues Faced and Solutions
 
-## Interactive 3D Globe
+## 🔴 Problem 1 — Model Size
 
-The platform is built around a real-time 3D globe providing a visual representation of intelligence events occurring around the world.
+The originally suggested `llama3.1` model is **4.7 GB**, which was too large for a standard laptop.
 
-Features include:
+This pushed memory usage past **5 GB**, causing:
 
-* Interactive 3D Earth visualization
-* Automatic globe rotation
-* Country border rendering
-* Zoom controls
-* Drag navigation
-* Real-time event markers
-* Event auto-focus
-* Dynamic filtering system
-* Threat heatmap visualization
-* Multi-domain intelligence awareness
+* The system to freeze
+* Requests to time out after 5+ minutes
+* The dashboard to become unusable
 
----
+### ✅ Solution
 
-# Intelligence Domains
+Four models were tested to find one that was both capable and memory efficient.
 
-## Space Domain
+| Attempt | Model            |        Size | Result                                           |
+| ------- | ---------------- | ----------: | ------------------------------------------------ |
+| 1st     | `llama3.1`       |      4.7 GB | System froze and requests timed out              |
+| 2nd     | `phi3:mini`      |      3.9 GB | Still too heavy                                  |
+| 3rd     | `tinyllama`      |     ~600 MB | Fast but incoherent and hallucinated Python code |
+| 4th     | **`qwen2:0.5b`** | **~500 MB** | Fast enough, coherent, and fits in memory        |
 
-### International Space Station (ISS)
-
-Live ISS tracking powered by orbital calculations and TLE propagation.
-
-Features:
-
-* Live ISS position
-* Orbital path visualization
-* Ground track display
-* Altitude monitoring
-* Velocity monitoring
-* Crew monitoring
-* Crew manifest display
-* Real-time updates
-
-### Space Weather
-
-Powered by NOAA Space Weather data.
-
-Features:
-
-* KP Index monitoring
-* Geomagnetic storm awareness
-* Solar activity awareness
-* Space weather operational status
-
-### Satellite Awareness
-
-Features:
-
-* Simulated Starlink constellation
-* Orbital object visualization
-* Space situational awareness
+The result demonstrated that using the biggest model is not necessarily the best approach. It is better to find the **smallest model capable of completing the required task**.
 
 ---
 
-## Air Domain
+## 🔴 Problem 2 — Large Event Objects
 
-### Aircraft Tracking
+The dashboard's event objects contained `__threeObjPoint`, which included massive Three.js geometry information such as:
 
-Powered by OpenSky Network.
+* Cylinders
+* Materials
+* Matrices
+* UUIDs
 
-Features:
+When `JSON.stringify()` was used, this information was included in the prompt.
 
-* Live aircraft monitoring
-* Aircraft position tracking
-* Callsign information
-* Origin country information
-* Altitude monitoring
-* Speed monitoring
-* Aircraft statistics
-* Air domain awareness
+This resulted in the model receiving thousands of tokens of irrelevant 3D rendering data instead of useful intelligence.
 
----
+### ✅ Solution
 
-## Maritime Domain
+A `cleanEvent()` function was added to strip the Three.js internals before sending the data to the AI.
 
-### Vessel Tracking
+It:
 
-Features:
+* Removes `__threeObjPoint`
+* Removes `__threeObjLabel`
+* Removes `__threeObjDot`
+* Truncates `details` to 200 characters
+* Limits arrays to 5 items per category
+* Keeps only:
 
-* Maritime traffic visualization
-* Cargo vessel monitoring
-* Tanker monitoring
-* Port activity awareness
-* Vessel movement simulation
-* Maritime statistics
+  * `title`
+  * `type`
+  * `location`
+  * `time`
+  * `details`
+  * `lat`
+  * `lng`
+  * `size`
+  * `color`
 
----
-
-## Earth Domain
-
-### Earthquake Monitoring
-
-Powered by the United States Geological Survey (USGS).
-
-Features:
-
-* Live earthquake feed
-* Magnitude reporting
-* Depth reporting
-* Global earthquake tracking
-
-### Volcano Monitoring
-
-Powered by NASA EONET.
-
-Features:
-
-* Active volcano monitoring
-* Eruption awareness
-* Global volcanic activity tracking
-
-### Weather Monitoring
-
-Features:
-
-* Severe weather alerts
-* Active weather warnings
-* Weather event visualization
-
-### Disaster Intelligence
-
-Powered by GDACS.
-
-Features:
-
-* Global disaster monitoring
-* Emergency event tracking
-* Disaster awareness visualization
+This reduced the prompt size by approximately **80%** and eliminated the model's tendency to describe JSON structures instead of analyzing them.
 
 ---
 
-## Cyber Threat Intelligence
+## 🔴 Problem 3 — CPU Inference Time
 
-### CVE Monitoring
+With CPU-only inference, even the 500 MB model can take **30–60 seconds** to respond.
 
-Powered by the National Vulnerability Database (NVD).
+The default fetch timeout therefore terminated requests before the model had finished.
 
-Features:
+### ✅ Solution
 
-* Live CVE monitoring
-* CVSS scoring
-* Critical vulnerability identification
-* Severity prioritization
+The following timeout and response-length controls were implemented:
 
-### Known Exploited Vulnerabilities (KEV)
-
-Powered by CISA.
-
-Features:
-
-* Active exploitation monitoring
-* Known exploited vulnerability tracking
-* High-priority threat awareness
-
-### Threat Intelligence
-
-Features:
-
-* Cybersecurity advisory monitoring
-* Threat intelligence tracking
-* Security event monitoring
-
-### Ransomware Monitoring
-
-Powered by Ransomware.live.
-
-Features:
-
-* Victim monitoring
-* Campaign awareness
-* Sector tracking
-* Incident monitoring
-
-### Data Breach Monitoring
-
-Features:
-
-* Public breach intelligence
-* Records exposure awareness
-* Breach event tracking
-* Breach monitoring
+* **Frontend:** 240-second `AbortController` timeout
+* **Backend:** 300-second timeout for Ollama calls
+* **Backend R3-Skill:** Handled directly by Flask
+* **`num_predict: 512`:** Caps the response length
 
 ---
 
-## Network Intelligence
+## 🔴 Problem 4 — R3-Skill Memory Overhead
 
-### Internet Outage Monitoring
+Tencent R3-Skill requires two separate models:
 
-Features:
+* `tencent/R3-embedding-0.6b`
+* `tencent/R3-rerank-0.6b`
 
-* Regional outage awareness
-* Connectivity disruption monitoring
-* Network event tracking
+Each requires approximately **2.4 GB** of memory.
 
-### BGP Monitoring
+Running these alongside Ollama and the dashboard created a significant memory requirement.
 
-Features:
+### ✅ Solution — Lightweight R3 Implementation
 
-* BGP anomaly monitoring
-* Route hijack awareness
-* Internet routing visibility
+A streamlined Flask microservice was built that:
 
----
-
-# Intelligence Operations
-
-## Threat Timeline
-
-The timeline provides a chronological view of intelligence events.
-
-Supported views:
-
-* Last Hour
-* Last 24 Hours
-* Last 7 Days
-* Last 30 Days
-* Last Year
-
-Features:
-
-* Historical event analysis
-* Event filtering
-* Timeline navigation
-* Event prioritization
+* Loads `tencent/R3-embedding-0.6b` and `tencent/R3-rerank-0.6b` once at startup
+* Runs on a dedicated port (`5051`)
+* Uses PyTorch
+* Returns skill names rather than paragraphs
+* Provides extremely fast inference
+* Can be killed independently if memory becomes critical
 
 ---
 
-## Correlation Engine
-
-The correlation engine attempts to identify relationships between intelligence events.
-
-Features:
-
-* Threat correlation
-* CVE correlation
-* KEV matching
-* Threat intelligence matching
-* Confidence scoring
-* Severity scoring
-* Correlation reasoning
-* Threat prioritization
-
----
-
-## Threat Heatmap
-
-The heatmap layer visualizes concentrations of activity across the globe.
-
-Threat levels are calculated using:
-
-* CVEs
-* KEVs
-* Threat intelligence
-* Data breaches
-* Ransomware activity
-* Internet outages
-* BGP anomalies
-* Natural disasters
-
----
-
-## News Ticker
-
-A live intelligence ticker provides continuously updated event information across the platform.
-
-Includes:
-
-* Earthquakes
-* Cyber threats
-* KEV additions
-* Data breaches
-* Threat intelligence updates
-* Ransomware activity
-
----
-
-## Global Risk Assessment
-
-The platform calculates an overall global risk score.
-
-Risk Levels:
-
-* LOW
-* ELEVATED
-* HIGH
-* CRITICAL
-
-Factors include:
-
-* Critical vulnerabilities
-* Active KEVs
-* Ransomware incidents
-* Threat intelligence alerts
-* Data breaches
-* Network events
-
----
-
-## Feed Health Monitoring
-
-Feed health monitoring provides operational awareness of platform data sources.
-
-Monitored Feeds:
-
-* ISS Tracking
-* Space Weather
-* Earthquakes
-* Volcanoes
-* Aircraft Tracking
-* Maritime Tracking
-* CVE Feed
-* KEV Feed
-* Threat Intelligence Feed
-* Ransomware Feed
-* Data Breach Feed
-* Internet Outage Feed
-* BGP Monitoring Feed
-
----
-
-# AI Intelligence Assistant
-
-One of the core features of the platform is the built-in AI Intelligence Assistant.
-
-The assistant is powered locally using Ollama and can answer questions using live dashboard data.
-
-Unlike traditional AI chatbots, the assistant receives structured intelligence data directly from the dashboard.
-
-Example Questions:
-
-* What is the current global risk level?
-* What is the top threat right now?
-* Summarize the last 24 hours.
-* Are there any correlated threats?
-* How many aircraft are currently being tracked?
-* What are the most significant cyber events?
-* Explain why the risk level is elevated.
-
-Features:
-
-* Local AI processing
-* No cloud dependency
-* No API costs
-* Dashboard-aware responses
-* Analyst-style summaries
-* Natural language interaction
-
----
-
-# Technology Stack
-
-## Frontend
-
-* React
-* Vite
-* React Globe GL
-* Three.js
-
-## Geospatial Processing
-
-* GeoJSON
-* TopoJSON
-
-## Orbital Processing
-
-* Satellite.js
-* TLE Propagation
-
-## Backend
-
-* Node.js
-* Express
-* CORS
-
-## Artificial Intelligence
-
-* Ollama
-* Llama 3.1
-
----
-
-# Data Sources
-
-## Space
-
-* Open Notify
-* WhereTheISS.at
-* NOAA Space Weather Prediction Center
-
-## Aviation
-
-* OpenSky Network
-
-## Earth & Disaster
-
-* USGS Earthquake Feed
-* NASA EONET
-* GDACS
-* Weather.gov
-
-## Cyber Intelligence
-
-* National Vulnerability Database (NVD)
-* CISA KEV Catalog
-* Ransomware.live
-* Public Threat Intelligence Sources
-
-## Network Intelligence
-
-* Internet Outage Monitoring Sources
-* BGP Monitoring Sources
-
----
-
-# Installation
-
-## Requirements
-
-Install:
-
-* Node.js 20+
-* npm
-* Ollama
-
----
-
-## Clone Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/global-situation-dashboard.git
-cd global-situation-dashboard
+# 🏗️ Architecture
+
+```text
+┌─────────────┐      ┌─────────────┐      ┌─────────────────┐
+│  Browser    │─────▶│  Node.js    │─────▶│  Python Service │
+│  (React)    │◀─────│  (port 5050)│◀─────│  (port 5051)    │
+└─────────────┘      └─────────────┘      └─────────────────┘
+                            │                     │
+                            ▼                     ▼
+                     ┌─────────────┐      ┌─────────────┐
+                     │  Ollama     │      │  R3-Skill   │
+                     │  qwen2:0.5b │      │  PyTorch    │
+                     │  (port 11434)│      │  (2 models) │
+                     └─────────────┘      └─────────────┘
 ```
 
----
+## 🔄 Four Processes
 
-## Install Frontend Dependencies
+Four processes run simultaneously:
 
-```bash
-npm install
-```
-
----
-
-## Install Ollama
-
-Download and install Ollama.
-
-Pull the required model:
+### 1. R3-Skill Microservice
 
 ```bash
-ollama pull llama3.1
+python server/r3_server.py
 ```
 
----
+**Port:** `5051`
 
-## Start Ollama
+### 2. Ollama
 
 ```bash
-ollama run llama3.1
+ollama run qwen2:0.5b
 ```
 
----
+**Port:** `11434`
 
-## Start AI Backend
+### 3. Node.js API Gateway
 
 ```bash
 node server/index.js
 ```
 
-Expected output:
+**Port:** `5050`
 
-```text
-Local AI assistant running on http://localhost:5050
-```
-
----
-
-## Start Dashboard
+### 4. Vite Dashboard
 
 ```bash
 npm run dev
 ```
 
-Open:
+**Port:** `5173`
+
+---
+
+# 🤖 Model Details
+
+## 🔵 Model A — Deterministic
+
+**Endpoint:**
+
+```text
+POST /api/assistant/deterministic
+```
+
+### Configuration
+
+```javascript
+options: {
+  temperature: 0,
+  top_k: 1,
+  seed: 42,
+  num_predict: 512
+}
+```
+
+### What This Means
+
+At `temperature: 0`, the model's probability distribution collapses to a single point.
+
+Combined with `top_k: 1`, there is no choice between different tokens. The model selects the highest-probability token at every step.
+
+The fixed `seed: 42` ensures reproducibility.
+
+Therefore:
+
+```text
+Same prompt
+     ↓
+Same token sequence
+     ↓
+Same output
+```
+
+### Use Case
+
+* Consistent risk scoring
+* Repeatable intelligence reports
+* Automated alerting where variance is unacceptable
+
+---
+
+## 🟣 Model B — Probabilistic
+
+**Endpoint:**
+
+```text
+POST /api/assistant/probabilistic
+```
+
+### Configuration
+
+```javascript
+options: {
+  temperature: 0.8,
+  top_p: 0.9,
+  top_k: 40,
+  num_predict: 512
+}
+```
+
+No seed is used, so the random number generation varies naturally between runs.
+
+### What This Means
+
+`temperature: 0.8` allows lower-probability tokens to become viable.
+
+`top_p: 0.9` implements nucleus sampling by limiting sampling to tokens whose cumulative probability reaches 0.9.
+
+`top_k: 40` limits the candidates considered to the top 40 tokens.
+
+Therefore:
+
+```text
+Same prompt
+     ↓
+Different token sampling
+     ↓
+Different wording / emphasis
+     ↓
+Different output
+```
+
+### Use Case
+
+* Brainstorming threat hypotheses
+* Generating diverse analyst perspectives
+* Creative summarization
+
+---
+
+## 🟢 Model C — Tencent R3-Skill
+
+**Endpoint:**
+
+```text
+POST /api/r3/route
+```
+
+The request is proxied to the Python service running on port `5051`.
+
+### What It Is
+
+R3-Skill is not a chatbot.
+
+It is a **retrieval system** that matches an event description against a library of predefined response skills and returns the best match.
+
+### Stage 1 — Recall
+
+**Bi-Encoder**
+
+`R3-Embedding` converts the query and skills into dense vectors.
+
+Cosine similarity is then used to quickly recall the most likely candidates.
+
+### Stage 2 — Rerank
+
+**Cross-Encoder**
+
+`R3-Reranker` takes the query and each candidate skill as a joint input and calculates a more accurate relevance score.
+
+The highest-scoring skill wins.
+
+```text
+Event Description
+       ↓
+R3-Embedding
+       ↓
+Top Candidate Skills
+       ↓
+R3-Reranker
+       ↓
+Best Matching Skill
+```
+
+---
+
+# 📚 Skill Library
+
+The skill library is stored in:
+
+```text
+server/skills.jsonl
+```
+
+The available skills are:
+
+| Skill                  | Description                                  |
+| ---------------------- | -------------------------------------------- |
+| `disaster-response`    | Earthquakes, tsunamis, volcanic eruptions    |
+| `cyber-alert`          | CVEs, ransomware, data breaches              |
+| `infrastructure-check` | Internet outages, power, transportation      |
+| `maritime-redirect`    | Reroute vessels from hazardous zones         |
+| `aircraft-grounding`   | No-fly orders around dangerous airspace      |
+| `space-debris-warn`    | Geomagnetic storms, orbital collisions       |
+| `threat-intel-brief`   | Correlated threats, emerging attack patterns |
+| `public-health-alert`  | Biological threats, pandemics                |
+
+### Example
+
+```text
+Query:
+"earthquake in Japan magnitude 7"
+
+Result:
+disaster-response
+Confidence: 77.50
+
+Runner-up:
+space-debris-warn (77.50)
+aircraft-grounding (77.50)
+```
+
+### Use Case
+
+R3-Skill provides **automated triage**.
+
+When an event occurs, it can identify which response playbook should be activated.
+
+---
+
+# ⚙️ How to Run
+
+## 📋 Prerequisites
+
+* Node.js 20+
+* Python 3.10+ with pip
+* Ollama installed locally
+* ~4 GB free RAM for peak usage
+
+---
+
+## 1️⃣ Install Dependencies
+
+### Frontend / Dashboard
+
+```bash
+npm install
+```
+
+### Python / R3-Skill
+
+```bash
+pip install torch transformers flask flask-cors numpy
+```
+
+---
+
+## 2️⃣ Pull the LLM
+
+```bash
+ollama pull qwen2:0.5b
+```
+
+If more RAM is available, `qwen2:0.5b` can be replaced with a larger model in:
+
+```text
+server/index.js
+```
+
+The code is model-agnostic.
+
+---
+
+## 3️⃣ Start the Four Services
+
+### Terminal 1 — Ollama
+
+```bash
+ollama run qwen2:0.5b
+```
+
+### Terminal 2 — R3-Skill Python Service
+
+```bash
+python server/r3_server.py
+```
+
+This will download approximately **4.8 GB** of R3 model weights on the first run.
+
+### Terminal 3 — Node.js Backend
+
+```bash
+node server/index.js
+```
+
+### Terminal 4 — Vite Dashboard
+
+```bash
+npm run dev
+```
+
+---
+
+## 4️⃣ Open the Dashboard
+
+Navigate to:
 
 ```text
 http://localhost:5173
@@ -530,99 +456,69 @@ http://localhost:5173
 
 ---
 
-# Current Development Status (Completed)
+# 📡 API Endpoints
 
-## Phase 1 Complete
-
-* Interactive Globe
-* Country Borders
-* Event Markers
-* Earthquake Monitoring
-* ISS Tracking
-
-## Phase 2 Complete
-
-* Space Weather
-* Volcano Monitoring
-* Weather Alerts
-* Event Filtering
-* ISS Crew Tracking
-
-## Phase 3 Complete
-
-* CVE Monitoring
-* KEV Monitoring
-* Threat Intelligence
-* Ransomware Monitoring
-* Data Breach Monitoring
-* Global Risk Assessment
-* Feed Health Monitoring
-
-## Phase 4 Complete
-
-* Threat Timeline
-* Correlation Engine
-* News Ticker
-* Aircraft Tracking
-* Maritime Tracking
-* Threat Heatmap
-* Local AI Intelligence Assistant
+| Endpoint                       | Method | Body                    | Description                   |
+| ------------------------------ | ------ | ----------------------- | ----------------------------- |
+| `/api/health`                  | GET    | `-`                     | Check if server is alive      |
+| `/api/assistant`               | POST   | `{question, dashboard}` | Original assistant (balanced) |
+| `/api/assistant/deterministic` | POST   | `{question, dashboard}` | Model A — deterministic       |
+| `/api/assistant/probabilistic` | POST   | `{question, dashboard}` | Model B — probabilistic       |
+| `/api/r3/route`                | POST   | `{query}`               | Model C — R3-Skill router     |
 
 ---
 
-# Future Enhancements & Ideas
+# 📊 Deterministic vs. Probabilistic
 
-## Intelligence & Analytics
+| Aspect                | Model A — Deterministic | Model B — Probabilistic        |
+| --------------------- | ----------------------- | ------------------------------ |
+| **Decoding strategy** | Greedy                  | Nucleus sampling               |
+| **Temperature**       | 0                       | 0.8                            |
+| **Top-k**             | 1                       | 40                             |
+| **Top-p**             | N/A                     | 0.9                            |
+| **Seed**              | Fixed (42)              | None                           |
+| **Output behaviour**  | Identical every run     | Varies in wording and emphasis |
+| **Trade-off**         | Boring but reliable     | Insightful but inconsistent    |
 
-* Historical Event Playback
-* Alert Subscriptions
-* Export Intelligence Reports
-* Automated Threat Assessment
-* Predictive Intelligence Models
-* AI-Assisted Event Classification
-* Geopolitical Intelligence Monitoring
-* Conflict Monitoring
-* Threat Actor Tracking
-* Country Risk Scoring
+## 🧪 How It Was Proved
 
-## Disaster Monitoring
+The same question was asked through both models:
 
-* Wildfire Monitoring
-* Hurricane Tracking
-* Flood Monitoring
-* Tsunami Monitoring
+```text
+"What is the global risk level?"
+```
 
-## Air & Maritime
+The deterministic model returned rigid, nearly identical structured reports on repeated runs.
 
-* Real-Time AIS Integration
-* Expanded Aircraft Tracking
-* Military Aircraft Monitoring
-* Port Activity Monitoring
-* Shipping Route Analysis
+The probabilistic model changed its:
 
-## User Experience
+* Phrasing
+* Threat emphasis
+* Analysis ordering
 
-* User Configurable Dashboards
-* Multi-User Support
-* Saved Dashboard Layouts
-* Custom Alert Rules
-* Mobile Dashboard Support
+between runs using the same dashboard snapshot.
 
-## Infrastructure
-
-* Docker Deployment
-* Kubernetes Deployment
-* Authentication & User Management
-* External API Access
+This demonstrated the difference between deterministic and probabilistic model behaviour.
 
 ---
 
-# Contributing
+# 📁 Files Added / Modified
 
-Contributions, feature requests, bug reports, and suggestions are welcome.
+| File                  | Change                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `server/index.js`     | Added `/api/assistant/deterministic`, `/api/assistant/probabilistic`, and `/api/r3/route` endpoints                |
+| `server/r3_server.py` | **New** — Flask microservice running Tencent R3-Skill                                                              |
+| `server/skills.jsonl` | **New** — Skill library for R3-Skill routing                                                                       |
+| `src/App.jsx`         | Added three AI buttons — Original, Deterministic, Probabilistic — plus R3-Skill Router panel and data sanitization |
 
 ---
 
-# License
+# 📝 Notes
 
-MIT License
+* **All models run locally.** No OpenAI, Claude, or cloud AI APIs are used.
+* The only external calls are for live data feeds such as USGS earthquakes, NASA EONET, NVD CVEs, and other live event data.
+* **R3-Skill was the stretch goal.** The brief required investigating whether the model could be installed and implemented.
+* R3-Skill was successfully implemented despite requiring PyTorch and approximately **4.8 GB of model weights**.
+* **Memory management was the dominant challenge.**
+* The progression from `llama3.1` → `phi3:mini` → `tinyllama` → `qwen2:0.5b` demonstrates that model selection is a resource-constrained optimization problem.
+* **Data sanitization was critical.** Removing `__threeObjPoint` and truncating descriptions prevented the model from wasting its context window on 3D geometry metadata instead of threat intelligence.
